@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "company": "Maplebridge Labs",
+    "note": "Built with sample data to protect confidentiality. Maplebridge Labs and every vendor below are fictional. Vendor answers are SAMPLE values for demonstration; for a real tool, verify each one with the vendor."
+  },
+  "vendors": [
+    {
+      "id": "ferngrove",
+      "name": "Ferngrove Research",
+      "category": "Research assistant",
+      "description": "Summarises reports, papers and news into briefings.",
+      "plans": {
+        "standard": { "training": "never", "retention": "30", "certification": "both", "sso": "enforced", "scim": "yes", "dpa": "signed", "residency": "selectable", "auditLogs": "yes" },
+        "enterprise": null
+      }
+    },
+    {
+      "id": "quillstone",
+      "name": "Quillstone Writer",
+      "category": "Writing assistant",
+      "description": "Drafts and rewrites emails, proposals and documents.",
+      "plans": {
+        "standard": { "training": "opt-out", "retention": "90", "certification": "soc2", "sso": "none", "scim": "no", "dpa": "none", "residency": "none", "auditLogs": "no" },
+        "enterprise": { "training": "never", "retention": "configurable", "certification": "both", "sso": "available", "scim": "yes", "dpa": "signed", "residency": "none", "auditLogs": "yes" }
+      }
+    },
+    {
+      "id": "lumen",
+      "name": "Lumen Notes",
+      "category": "Meeting notes",
+      "description": "Joins calls, records them and writes a summary.",
+      "plans": {
+        "standard": { "training": "default-on", "retention": "forever", "certification": "none", "sso": "none", "scim": "no", "dpa": "none", "residency": "none", "auditLogs": "no" },
+        "enterprise": null
+      }
+    },
+    {
+      "id": "codewright",
+      "name": "Codewright",
+      "category": "Coding assistant",
+      "description": "Suggests and explains code inside the editor.",
+      "plans": {
+        "standard": { "training": "opt-out", "retention": "30", "certification": "soc2", "sso": "available", "scim": "no", "dpa": "on-request", "residency": "us-eu", "auditLogs": "no" },
+        "enterprise": { "training": "never", "retention": "0", "certification": "both", "sso": "enforced", "scim": "yes", "dpa": "signed", "residency": "us-eu", "auditLogs": "yes" }
+      }
+    },
+    {
+      "id": "brightdesk",
+      "name": "Brightdesk Assist",
+      "category": "Customer support",
+      "description": "Drafts replies to customer tickets from the help desk.",
+      "plans": {
+        "standard": { "training": "opt-out", "retention": "30", "certification": "soc2", "sso": "available", "scim": "yes", "dpa": "signed", "residency": "selectable", "auditLogs": "yes" },
+        "enterprise": null
+      }
+    },
+    {
+      "id": "pixelmint",
+      "name": "Pixelmint Studio",
+      "category": "Image generation",
+      "description": "Creates images and banners from a text description.",
+      "plans": {
+        "standard": { "training": "default-on", "retention": "forever", "certification": "none", "sso": "none", "scim": "no", "dpa": "none", "residency": "none", "auditLogs": "no" },
+        "enterprise": null
+      }
+    }
+  ]
+}

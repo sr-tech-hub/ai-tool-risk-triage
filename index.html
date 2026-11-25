@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Tool Risk Triage</title>
+<meta name="description" content="Should we approve this AI tool? Scores an employee's AI tool request against readable, editable security rules and returns Approve, Approve with conditions, or Deny. Built with sample data.">
+<style>
+  :root {
+    --bg: #07090d;
+    --panel: #0e131a;
+    --panel-2: #141b24;
+    --border: #1f2935;
+    --text: #e6edf3;
+    --muted: #8a97a6;
+    --cyan: #22d3ee;
+    --amber: #fbbf24;
+    --green: #34d399;
+    --purple: #a78bfa;
+    --red: #f87171;
+    --radius: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; }
+
+  header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); font-weight: 600; }
+  h1 { margin: 4px 0 2px; font-size: clamp(24px, 4vw, 32px); line-height: 1.15; }
+  .sub { color: var(--muted); margin: 0; }
+  .sample-note {
+    border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+    background: color-mix(in srgb, var(--amber) 10%, transparent);
+    color: var(--amber); border-radius: 999px; padding: 6px 14px; font-size: 13px;
+  }
+
+  .grid { display: grid; gap: 16px; margin-bottom: 16px; }
+  @media (min-width: 900px) { .grid.two { grid-template-columns: 1fr 1.15fr; align-items: start; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  .wrap > .panel + .panel { margin-top: 16px; }
+  .panel h2 { margin: 0 0 4px; font-size: 18px; }
+  .panel h3 { margin: 18px 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .panel .lead { color: var(--muted); margin: 0 0 14px; font-size: 13.5px; }
+  .tag-title { display: inline-block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+  .small { color: var(--muted); font-size: 12.5px; }
+
+  .field { margin: 0 0 14px; }
+  .field > label, .field legend { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; padding: 0; }
+  fieldset.field { border: 0; padding: 0; min-width: 0; }
+  .field .input-wrap { display: flex; align-items: center; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; }
+  .field .input-wrap:focus-within { border-color: var(--cyan); }
+  .field input, .field textarea { width: 100%; min-width: 0; background: transparent; border: 0; color: var(--text); font: inherit; font-size: 16px; padding: 8px 4px; outline: none; resize: vertical; }
+  .field .unit { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .field p.small { margin: 4px 0 0; }
+  select {
+    width: 100%; min-width: 0; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 16px;
+  }
+  select:focus { outline: none; border-color: var(--cyan); }
+  table select { font-size: 14px; padding: 6px 8px; min-width: 150px; }
+  @media (max-width: 560px) { table select { font-size: 16px; } }
+
+  .actions { margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.reset { background: transparent; color: var(--cyan); border: 1px solid color-mix(in srgb, var(--cyan) 50%, transparent); border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  button.reset:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+  button.reset[aria-pressed="true"] { background: color-mix(in srgb, var(--cyan) 18%, transparent); color: var(--text); }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+
+  .data-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+  .data-types label { display: flex; gap: 10px; align-items: flex-start; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; cursor: pointer; }
+  .data-types label:has(input:checked) { border-color: color-mix(in srgb, var(--cyan) 60%, transparent); }
+  .data-types input { margin: 3px 0 0; accent-color: var(--cyan); width: 16px; height: 16px; flex: none; }
+  .data-types strong { display: block; font-weight: 600; }
+  .tier { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; margin-left: 6px; }
+  .tier-0 { color: var(--muted); } .tier-1 { color: var(--cyan); } .tier-2 { color: var(--amber); } .tier-3 { color: var(--red); }
+
+  .verdict { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--panel-2)); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .verdict .label { font-size: 24px; font-weight: 700; color: var(--accent); line-height: 1.2; }
+  .verdict p { margin: 4px 0 0; }
+  .conditions { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+  .conditions li::marker { color: var(--amber); font-weight: 700; }
+  .hint-line { margin: 10px 0 0; }
+
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .checks li { background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 8px 12px; }
+  .checks .head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .checks p { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; }
+  .rule-id { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--purple); border: 1px solid color-mix(in srgb, var(--purple) 45%, transparent); border-radius: 4px; padding: 0 5px; }
+  .chip { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-left: auto; }
+
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  td.nowrap, th.nowrap { white-space: nowrap; }
+  tr.chosen td { background: color-mix(in srgb, var(--green) 7%, transparent); }
+  .pos { color: var(--green); } .neg { color: var(--red); } .warn { color: var(--amber); }
+  .offered { display: inline-flex; gap: 6px; align-items: center; font-weight: 400; color: var(--muted); margin-left: 8px; }
+  .offered input { accent-color: var(--cyan); }
+  .edited { color: var(--amber); }
+  .notice { border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); background: color-mix(in srgb, var(--red) 10%, transparent); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 13.5px; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--cyan); }
+  pre.ticket { white-space: pre-wrap; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 8px 0 0; }
+
+  dl.defs { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 8px 18px; margin: 0; }
+  dl.defs dt { font-weight: 600; color: var(--cyan); }
+  dl.defs dd { margin: 0; }
+  @media (max-width: 560px) {
+    dl.defs { grid-template-columns: 1fr; gap: 2px; }
+    dl.defs dd { margin-bottom: 8px; }
+  }
+  footer { color: var(--muted); font-size: 13px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">AI Tool Risk Triage</div>
+      <h1>Should we approve this AI tool?</h1>
+      <p class="sub">Maplebridge Labs · AI tool request review</p>
+    </div>
+    <div class="sample-note">Built with sample data to protect confidentiality.</div>
+  </header>
+
+  <div class="grid two">
+    <section class="panel" aria-labelledby="req-h">
+      <span class="tag-title" style="color:var(--cyan)">Request</span>
+      <h2 id="req-h">What do you want to use?</h2>
+      <p class="lead">Fill this in as the employee asking for the tool. The decision updates as you go.</p>
+      <div class="examples" id="examples"><span class="small">Try an example:</span></div>
+      <div class="notice" id="load-notice" hidden></div>
+
+      <div class="field">
+        <label for="tool">AI tool</label>
+        <select id="tool"></select>
+        <p class="small" id="tool-desc"></p>
+      </div>
+      <div class="field" id="custom-name-field" hidden>
+        <label for="custom-name">Tool name</label>
+        <div class="input-wrap"><input id="custom-name" type="text" autocomplete="off" placeholder="The tool you want to use"></div>
+      </div>
+      <div class="field">
+        <label for="purpose">What is it for?</label>
+        <div class="input-wrap"><textarea id="purpose" rows="2" placeholder="e.g. Draft follow-up emails after sales calls"></textarea></div>
+      </div>
+      <fieldset class="field">
+        <legend>Which data would you put into it? Tick all that apply.</legend>
+        <div class="data-types" id="data-types"></div>
+      </fieldset>
+    </section>
+
+    <section class="panel" aria-labelledby="dec-h">
+      <span class="tag-title" style="color:var(--green)">Decision</span>
+      <h2 id="dec-h">Triage result</h2>
+      <p class="lead">Worked out from the fixed rules below, not by AI, so every reason can be checked.</p>
+      <div id="decision"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="profile-h">
+    <span class="tag-title" style="color:var(--amber)">Vendor answers</span>
+    <h2 id="profile-h">Vendor profile: <span id="profile-name"></span></h2>
+    <p class="lead">Every answer here is a SAMPLE value for a fictional vendor. For a real tool, verify each one with the vendor. Change any answer to see how the decision moves.</p>
+    <div class="table-scroll"><table id="profile-table"></table></div>
+    <div class="actions">
+      <button type="button" class="reset" id="reset-profile">Reset to sample answers</button>
+      <span class="small" id="profile-status"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="rules-h">
+    <span class="tag-title" style="color:var(--purple)">Policy</span>
+    <h2 id="rules-h">Rules</h2>
+    <p class="lead">The company policy, as data. Choose the most sensitive data level each rule starts at, and whether failing it blocks the tool (Required), adds a workaround (Recommended), or is ignored (Off).</p>
+    <div class="table-scroll"><table id="rules-table"></table></div>
+    <div class="actions">
+      <div class="field" style="margin:0;max-width:260px">
+        <label for="retention-limit">Longest retention allowed (R2)</label>
+        <div class="input-wrap"><input id="retention-limit" type="number" inputmode="numeric" min="0" step="1"><span class="unit">days</span></div>
+      </div>
+      <button type="button" class="reset" id="reset-rules">Reset rules</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="score-h">
+    <span class="tag-title" style="color:var(--purple)">Method</span>
+    <h2 id="score-h">How we score</h2>
+    <p class="lead">Seven questions every vendor gets asked, checked in the same order every time.</p>
+    <dl class="defs">
+      <dt>Data level</dt><dd>The most sensitive data ticked sets the level: Public, then Internal, then Confidential (source code, financial), then Restricted (customer PII, HR/health). Higher levels check more rules.</dd>
+      <dt>Rule</dt><dd>One check against one vendor answer, for example "R1: the vendor does not train its models on our data". Each rule starts at a data level.</dd>
+      <dt>Met</dt><dd>The vendor's answer passes as it is.</dd>
+      <dt>Met with setup</dt><dd>It passes once a setting or contract step is done, such as switching on SSO. That step becomes a condition.</dd>
+      <dt>Not met</dt><dd>A Required rule that is not met blocks that plan. A Recommended rule that is not met adds a workaround as a condition instead.</dd>
+      <dt>Unknown</dt><dd>Counts as not met. If we can't confirm it, we don't assume it.</dd>
+      <dt>Order tried</dt><dd>The Standard plan with all the data asked for, then the Enterprise plan. If both are blocked, the same again without the most sensitive data, as long as some of the requested data is left. The first plan with nothing blocking it wins.</dd>
+      <dt>Approve</dt><dd>The Standard plan passes for all the data asked for, with no conditions.</dd>
+      <dt>Approve with conditions</dt><dd>A plan passes, but only on the Enterprise plan, without some data, or after setup steps. Every condition is listed.</dd>
+      <dt>Deny</dt><dd>No plan passes, even with the most sensitive data taken out. The blocking rules are listed so the requester knows what would have to change.</dd>
+    </dl>
+  </section>
+
+  <footer id="footer">Built with sample data to protect confidentiality. Maplebridge Labs and every vendor shown are fictional.</footer>
+</div>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Scoring config. The whole policy lives here, in plain data, so it can be
+// read in a review and edited on the page.
+// ---------------------------------------------------------------------------
+const TIERS = ['Public', 'Internal', 'Confidential', 'Restricted'];
+
+const DATA_TYPES = [
+  { id: 'public', label: 'Public', tier: 0, hint: 'Already published, like website copy' },
+  { id: 'internal', label: 'Internal', tier: 1, hint: 'Docs, plans and chat that stay inside the company' },
+  { id: 'code', label: 'Source code', tier: 2, hint: 'Our repositories and scripts' },
+  { id: 'financial', label: 'Financial', tier: 2, hint: 'Budgets, forecasts, unreleased results' },
+  { id: 'pii', label: 'Customer PII', tier: 3, hint: 'Names, emails and account details of customers' },
+  { id: 'hr', label: 'HR / health', tier: 3, hint: 'Reviews, pay, medical or leave records' },
+];
+
+// appliesFrom: the lowest data level (index into TIERS) the rule is checked at.
+// level: 'required' blocks the plan when not met, 'recommended' adds the
+// fallback as a condition instead, 'off' skips the rule.
+const DEFAULT_SETTINGS = {
+  retentionLimitDays: 30,
+  rules: [
+    { id: 'R1', name: 'No training on our data', attr: 'training', appliesFrom: 1, level: 'required' },
+    { id: 'R2', name: 'Short data retention', attr: 'retention', appliesFrom: 2, level: 'required' },
+    { id: 'R3', name: 'Independent security audit', attr: 'certification', appliesFrom: 1, level: 'required' },
+    { id: 'R4', name: 'Single sign-on (SSO)', attr: 'sso', appliesFrom: 1, level: 'required' },
+    { id: 'R5', name: 'Data processing agreement (DPA)', attr: 'dpa', appliesFrom: 2, level: 'required' },
+    { id: 'R6', name: 'Data stays in the US/EU', attr: 'residency', appliesFrom: 3, level: 'required' },
+    { id: 'R7', name: 'Automatic account removal (SCIM)', attr: 'scim', appliesFrom: 2, level: 'recommended', fallback: "IT removes leavers' accounts by hand within 1 business day" },
+    { id: 'R8', name: 'Admin audit logs', attr: 'auditLogs', appliesFrom: 2, level: 'recommended', fallback: "The requester's manager reviews how the tool is used every quarter" },
+  ],
+};
+
+// The questions asked of every vendor, and the answers allowed.
+const ATTRIBUTES = [
+  { id: 'training', label: 'Trains its models on our data', options: [['never', 'Never'], ['opt-out', 'Yes, unless switched off'], ['default-on', 'Yes, no opt-out'], ['unknown', 'Unknown']] },
+  { id: 'retention', label: 'Keeps prompts and files for', options: [['0', 'Not stored'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year'], ['forever', 'Indefinitely'], ['configurable', 'Admin sets it'], ['unknown', 'Unknown']] },
+  { id: 'certification', label: 'Security audit (SOC 2 / ISO 27001)', options: [['both', 'SOC 2 Type II + ISO 27001'], ['soc2', 'SOC 2 Type II'], ['iso', 'ISO 27001'], ['none', 'None'], ['unknown', 'Unknown']] },
+  { id: 'sso', label: 'Single sign-on (SSO)', options: [['enforced', 'On, passwords blocked'], ['available', 'Available, must switch on'], ['none', 'Not offered'], ['unknown', 'Unknown']] },
+  { id: 'scim', label: 'Automatic provisioning (SCIM)', options: [['yes', 'Yes'], ['no', 'No'], ['unknown', 'Unknown']] },
+  { id: 'dpa', label: 'Data processing agreement', options: [['signed', 'Part of the contract'], ['on-request', 'Signed on request'], ['none', 'Not offered'], ['unknown', 'Unknown']] },
+  { id: 'residency', label: 'Where data is stored', options: [['us-eu', 'US/EU only'], ['selectable', 'Admin picks region'], ['none', 'Not guaranteed'], ['unknown', 'Unknown']] },
+  { id: 'auditLogs', label: 'Admin audit logs', options: [['yes', 'Yes'], ['no', 'No'], ['unknown', 'Unknown']] },
+];
+
+const EXAMPLES = [
+  { label: 'Research digest', vendor: 'ferngrove', purpose: 'Summarise analyst reports and industry news for the weekly strategy memo', data: ['public', 'internal'] },
+  { label: 'Customer follow-ups', vendor: 'quillstone', purpose: 'Draft follow-up emails to customers after sales calls', data: ['internal', 'pii'] },
+  { label: 'Recording HR 1:1s', vendor: 'lumen', purpose: 'Record and summarise manager 1:1 meetings', data: ['internal', 'hr'] },
+];
+
+const PLAN_NAMES = { standard: 'Standard', enterprise: 'Enterprise' };
+const OTHER = '__other';
+
+// ---------------------------------------------------------------------------
+// Rule checks: each reads one vendor answer and says met, fixable (met once a
+// setting or contract step is done) or unmet, in plain English.
+// ---------------------------------------------------------------------------
+const met = (detail) => ({ status: 'met', detail });
+const fixable = (detail, condition) => ({ status: 'fixable', detail, condition });
+const unmet = (detail) => ({ status: 'unmet', detail });
+const UNKNOWN = 'Unknown. Ask the vendor; until confirmed it counts as not met.';
+const answerLabel = (attr, value) => ATTRIBUTES.find((a) => a.id === attr).options.find(([v]) => v === value)?.[1] ?? value;
+
+const RULE_CHECKS = {
+  R1: (v) => (v === 'never' ? met('The vendor does not train its models on our data.')
+    : v === 'opt-out' ? fixable('Training is on unless an admin switches it off.', 'Switch off model training in the admin console before anyone uses it')
+    : v === 'default-on' ? unmet('The vendor trains its models on our data, with no way to opt out.') : unmet(UNKNOWN)),
+  R2: (v, s) => {
+    if (v === 'unknown') return unmet(UNKNOWN);
+    if (v === 'configurable') return fixable('The admin sets how long data is kept.', `Set data retention to ${s.retentionLimitDays} days or less`);
+    const days = v === 'forever' ? Infinity : Number(v);
+    const kept = days === 0 ? 'Prompts and files are not stored'
+      : days === Infinity ? 'Data is kept indefinitely' : `Data is kept for ${answerLabel('retention', v).toLowerCase()}`;
+    return days <= s.retentionLimitDays ? met(`${kept}; the limit is ${s.retentionLimitDays} days.`) : unmet(`${kept}; the limit is ${s.retentionLimitDays} days.`);
+  },
+  R3: (v) => (v === 'unknown' ? unmet(UNKNOWN) : v === 'none' ? unmet('No independent security audit report.') : met(`Audit report: ${answerLabel('certification', v)}.`)),
+  R4: (v) => (v === 'enforced' ? met('SSO is on and password sign-in is blocked.')
+    : v === 'available' ? fixable('SSO is offered but has to be switched on.', 'SSO required: switch it on and block password sign-in')
+    : v === 'none' ? unmet('No single sign-on, so access cannot be tied to company accounts.') : unmet(UNKNOWN)),
+  R5: (v) => (v === 'signed' ? met('A data processing agreement is part of the contract.')
+    : v === 'on-request' ? fixable('The vendor signs a DPA when asked.', 'Get the DPA signed before rollout')
+    : v === 'none' ? unmet('No data processing agreement on offer.') : unmet(UNKNOWN)),
+  R6: (v) => (v === 'us-eu' ? met('Data is stored in the US/EU only.')
+    : v === 'selectable' ? fixable('The admin chooses where data is stored.', 'Pin data storage to the US/EU in the admin console')
+    : v === 'none' ? unmet('The vendor does not guarantee where data is stored.') : unmet(UNKNOWN)),
+  R7: (v) => (v === 'yes' ? met("Leavers' accounts are removed automatically.") : unmet(v === 'no' ? 'No SCIM, so leavers keep access until removed by hand.' : UNKNOWN)),
+  R8: (v) => (v === 'yes' ? met('Admins can see who did what.') : unmet(v === 'no' ? 'No admin audit log.' : UNKNOWN)),
+};
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function joinWords(list) {
+  return list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+}
+
+// ---------------------------------------------------------------------------
+// The triage. Every decision on the page comes from this one function: it
+// tries each plan and data level in a fixed order and returns the first that
+// no Required rule blocks, plus everything it tried along the way.
+// ---------------------------------------------------------------------------
+function triage(request, profile, settings) {
+  const types = DATA_TYPES.filter((d) => request.data.includes(d.id));
+  if (!types.length) return { decision: null };
+
+  const plans = Object.keys(PLAN_NAMES).filter((id) => profile.plans[id]);
+  const evaluate = (plan, tier) => settings.rules.map((rule) => {
+    if (rule.level === 'off') return { rule, status: 'off' };
+    if (tier < rule.appliesFrom) return { rule, status: 'skipped' };
+    const result = { rule, ...RULE_CHECKS[rule.id](plan[rule.attr], settings) };
+    if (result.status === 'unmet' && rule.level === 'recommended') {
+      return { ...result, status: 'fallback', condition: rule.fallback ?? `Accepted risk: ${rule.name.toLowerCase()} not met; IT Security signs off` };
+    }
+    return result;
+  });
+
+  // Data levels to try, most sensitive first. Dropping to a level is only
+  // worth trying if some of the requested data is still at that level.
+  const tiers = [...new Set(types.map((t) => t.tier))].sort((a, b) => b - a);
+  const attempts = [];
+  for (const tier of tiers) {
+    for (const planId of plans) {
+      const results = evaluate(profile.plans[planId], tier);
+      attempts.push({
+        planId, tier, results,
+        kept: types.filter((t) => t.tier <= tier),
+        dropped: types.filter((t) => t.tier > tier),
+        blockers: results.filter((r) => r.status === 'unmet'),
+        ruleConditions: results.filter((r) => r.condition).map((r) => ({ id: r.rule.id, text: r.condition })),
+      });
+    }
+  }
+
+  const chosen = attempts.find((a) => !a.blockers.length);
+  const requestedTier = tiers[0];
+  if (!chosen) {
+    // Explain the denial with the full-data plan that came closest.
+    const full = attempts.filter((a) => a.tier === requestedTier);
+    const focus = full.reduce((best, a) => (a.blockers.length <= best.blockers.length ? a : best));
+    return { decision: 'deny', types, requestedTier, attempts, focus, conditions: [] };
+  }
+
+  const conditions = [];
+  if (chosen.planId !== 'standard') conditions.push({ id: 'Plan', text: `${PLAN_NAMES[chosen.planId]} plan only` });
+  if (chosen.dropped.length) conditions.push({ id: 'Data', text: `Do not enter ${joinWords(chosen.dropped.map((t) => t.label))} data` });
+  conditions.push(...chosen.ruleConditions);
+
+  // Another plan that passes at the same data level with fewer conditions is worth mentioning.
+  const alternative = attempts
+    .filter((a) => a !== chosen && a.tier === chosen.tier && !a.blockers.length && a.ruleConditions.length + 1 < conditions.length)
+    .sort((a, b) => a.ruleConditions.length - b.ruleConditions.length)[0] ?? null;
+
+  return {
+    decision: conditions.length ? 'conditions' : 'approve',
+    types, requestedTier, attempts, chosen, focus: chosen, conditions, alternative,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let VENDORS = [];
+let settings = structuredClone(DEFAULT_SETTINGS);
+const request = { vendorId: OTHER, customName: '', purpose: '', data: [] };
+let profile = null;
+let profileEdited = false;
+
+const blankPlan = () => Object.fromEntries(ATTRIBUTES.map((a) => [a.id, 'unknown']));
+function profileFor(vendorId) {
+  const v = VENDORS.find((x) => x.id === vendorId);
+  if (!v) return { name: '', category: 'Not listed', description: 'Not on the list yet. Fill in the vendor answers below.', plans: { standard: blankPlan(), enterprise: null } };
+  return structuredClone({ name: v.name, category: v.category, description: v.description, plans: v.plans });
+}
+const toolName = () => (request.vendorId === OTHER ? request.customName.trim() || 'This tool' : profile.name);
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+const STATUS = {
+  met: { label: 'Met', color: 'var(--green)' },
+  fixable: { label: 'Met with setup', color: 'var(--cyan)' },
+  fallback: { label: 'Not met: workaround', color: 'var(--amber)' },
+  unmet: { label: 'Not met', color: 'var(--red)' },
+};
+const VERDICTS = {
+  approve: { label: 'Approve', color: 'var(--green)' },
+  conditions: { label: 'Approve with conditions', color: 'var(--amber)' },
+  deny: { label: 'Deny', color: 'var(--red)' },
+};
+
+function verdictSentence(r) {
+  const name = toolName();
+  if (r.decision === 'approve') {
+    return `${name} is approved for ${joinWords(r.chosen.kept.map((t) => t.label))} data on the ${PLAN_NAMES[r.chosen.planId]} plan.`;
+  }
+  if (r.decision === 'conditions') {
+    const without = r.chosen.dropped.length ? `, without ${joinWords(r.chosen.dropped.map((t) => t.label))} data` : '';
+    return `${name} is approved on the ${PLAN_NAMES[r.chosen.planId]} plan${without}, once the conditions below are in place.`;
+  }
+  const lower = r.attempts.some((a) => a.tier < r.requestedTier) ? ', and not even with the most sensitive data taken out' : '';
+  return `${name} does not meet the Required rules for ${TIERS[r.requestedTier]} data on any plan${lower}.`;
+}
+
+function checkItem(res) {
+  const s = STATUS[res.status];
+  const extra = res.condition && res.status !== 'met' ? ` <span class="warn">→ ${esc(res.condition)}</span>` : '';
+  return `<li style="--accent:${s.color}">
+    <div class="head"><span class="rule-id">${res.rule.id}</span><strong>${esc(res.rule.name)}</strong><span class="chip">${s.label}</span></div>
+    <p>${esc(res.detail)}${extra}</p></li>`;
+}
+
+function attemptResult(a) {
+  if (a.blockers.length) return `<span class="neg">Blocked by ${a.blockers.map((b) => b.rule.id).join(', ')}</span>`;
+  const n = a.ruleConditions.length;
+  return `<span class="pos">Passes</span>${n ? ` <span class="small">with ${n} setup step${n === 1 ? '' : 's'}</span>` : ''}`;
+}
+
+function ticketText(r) {
+  const lines = [
+    `AI tool request: ${toolName()}`,
+    `Purpose: ${request.purpose.trim() || '(not given)'}`,
+    `Data: ${r.types.map((t) => t.label).join(', ')} (${TIERS[r.requestedTier]} level)`,
+    `Decision: ${VERDICTS[r.decision].label}`,
+  ];
+  if (r.conditions.length) lines.push('Conditions:', ...r.conditions.map((c) => `- ${c.text}`));
+  if (r.decision === 'deny') lines.push('Blocked by:', ...r.focus.blockers.map((b) => `- ${b.rule.id} ${b.rule.name}: ${b.detail}`));
+  const checked = r.focus.results.filter((x) => STATUS[x.status]);
+  lines.push(`Rules checked (${PLAN_NAMES[r.focus.planId]} plan): ${checked.map((x) => `${x.rule.id} ${STATUS[x.status].label.toLowerCase()}`).join('; ')}`);
+  lines.push('Vendor answers are sample values; verify with the vendor.');
+  return lines.join('\n');
+}
+
+function renderDecision() {
+  const el = document.getElementById('decision');
+  const r = triage(request, profile, settings);
+  if (!r.decision) {
+    el.innerHTML = '<div class="verdict" style="--accent:var(--muted)"><div class="label">Waiting</div><p>Tick at least one type of data to get a decision.</p></div>';
+    return;
+  }
+  const v = VERDICTS[r.decision];
+  const checked = r.focus.results.filter((x) => STATUS[x.status]);
+  const notChecked = r.focus.results.filter((x) => x.status === 'skipped');
+  const off = r.focus.results.filter((x) => x.status === 'off');
+  const ordered = r.decision === 'deny'
+    ? [...checked.filter((x) => x.status === 'unmet'), ...checked.filter((x) => x.status !== 'unmet')]
+    : checked;
+
+  el.innerHTML = `
+    <div class="verdict" style="--accent:${v.color}" role="status" aria-live="polite">
+      <div class="label">${v.label}</div>
+      <p>${esc(verdictSentence(r))}</p>
+    </div>
+    ${r.conditions.length ? `<h3>Conditions</h3><ol class="conditions">${r.conditions.map((c) => `<li>${esc(c.text)} <span class="rule-id">${esc(c.id)}</span></li>`).join('')}</ol>` : ''}
+    ${r.alternative ? `<p class="small hint-line">The ${PLAN_NAMES[r.alternative.planId]} plan also passes here, with ${r.alternative.ruleConditions.length ? `only ${r.alternative.ruleConditions.length} setup step${r.alternative.ruleConditions.length === 1 ? '' : 's'}` : 'no setup steps'}.</p>` : ''}
+    <h3>${r.decision === 'deny' ? `Why: ${PLAN_NAMES[r.focus.planId]} plan, ${TIERS[r.requestedTier]} data` : `Rules checked: ${PLAN_NAMES[r.focus.planId]} plan, ${TIERS[r.focus.tier]} data`}</h3>
+    ${ordered.length ? `<ul class="checks">${ordered.map(checkItem).join('')}</ul>` : '<p class="small">Only public data, so no data-handling rules apply.</p>'}
+    ${notChecked.length ? `<p class="small hint-line">Not needed at this data level: ${notChecked.map((x) => `${x.rule.id} (from ${TIERS[x.rule.appliesFrom]})`).join(', ')}.</p>` : ''}
+    ${off.length ? `<p class="small hint-line">Switched off in the rules: ${off.map((x) => x.rule.id).join(', ')}.</p>` : ''}
+    <h3>Paths tried, in order</h3>
+    <div class="table-scroll"><table>
+      <thead><tr><th scope="col">Plan</th><th scope="col">Data allowed</th><th scope="col">Result</th></tr></thead>
+      <tbody>${r.attempts.slice(0, r.chosen ? r.attempts.indexOf(r.chosen) + 1 : undefined).map((a) => `
+        <tr class="${a === r.chosen ? 'chosen' : ''}">
+          <td class="nowrap">${PLAN_NAMES[a.planId]}${a === r.chosen ? ' <span class="small">chosen</span>' : ''}</td>
+          <td>${esc(a.kept.map((t) => t.label).join(', '))}</td>
+          <td>${attemptResult(a)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <details>
+      <summary>Text for the ticket</summary>
+      <pre class="ticket" id="ticket">${esc(ticketText(r))}</pre>
+      <div class="actions"><button type="button" class="reset" id="copy-ticket">Copy</button><span class="small" id="copy-status" role="status"></span></div>
+    </details>`;
+}
+
+function renderProfile() {
+  document.getElementById('profile-name').textContent = toolName();
+  const ent = profile.plans.enterprise;
+  const usedBy = (attr) => settings.rules.filter((r) => r.attr === attr).map((r) => r.id).join(', ');
+  const cell = (planId, a) => {
+    const plan = profile.plans[planId];
+    if (!plan) return '<td class="small">Not offered</td>';
+    const opts = a.options.map(([val, label]) => `<option value="${val}"${plan[a.id] === val ? ' selected' : ''}>${esc(label)}</option>`).join('');
+    return `<td><select data-plan="${planId}" data-attr="${a.id}" aria-label="${esc(`${a.label}, ${PLAN_NAMES[planId]} plan`)}">${opts}</select></td>`;
+  };
+  document.getElementById('profile-table').innerHTML = `
+    <thead><tr>
+      <th scope="col">Question</th>
+      <th scope="col">Standard plan</th>
+      <th scope="col" class="nowrap">Enterprise plan <label class="offered"><input type="checkbox" id="ent-offered"${ent ? ' checked' : ''}> offered</label></th>
+    </tr></thead>
+    <tbody>${ATTRIBUTES.map((a) => `
+      <tr>
+        <td>${esc(a.label)} <span class="rule-id">${usedBy(a.id)}</span><div class="small">sample, verify with the vendor</div></td>
+        ${cell('standard', a)}${cell('enterprise', a)}
+      </tr>`).join('')}
+    </tbody>`;
+  document.getElementById('profile-status').innerHTML = profileEdited ? '<span class="edited">Edited from the sample answers.</span>' : '';
+  document.getElementById('reset-profile').hidden = !profileEdited;
+}
+
+function renderRules() {
+  const tierOpts = (sel) => TIERS.map((t, i) => `<option value="${i}"${sel === i ? ' selected' : ''}>${t} and up</option>`).join('');
+  const levelOpts = (sel) => [['required', 'Required: blocks'], ['recommended', 'Recommended: workaround'], ['off', 'Off']]
+    .map(([v, l]) => `<option value="${v}"${sel === v ? ' selected' : ''}>${l}</option>`).join('');
+  document.getElementById('rules-table').innerHTML = `
+    <thead><tr><th scope="col">Rule</th><th scope="col">Checked for</th><th scope="col">If not met</th></tr></thead>
+    <tbody>${settings.rules.map((r, i) => `
+      <tr>
+        <td><span class="rule-id">${r.id}</span> ${esc(r.name)}${r.level === 'recommended' && r.fallback ? `<div class="small">Workaround: ${esc(r.fallback)}</div>` : ''}</td>
+        <td><select data-rule="${i}" data-field="appliesFrom" aria-label="${r.id} checked for">${tierOpts(r.appliesFrom)}</select></td>
+        <td><select data-rule="${i}" data-field="level" aria-label="${r.id} if not met">${levelOpts(r.level)}</select></td>
+      </tr>`).join('')}
+    </tbody>`;
+  document.getElementById('retention-limit').value = settings.retentionLimitDays;
+}
+
+function renderRequest() {
+  const select = document.getElementById('tool');
+  select.value = request.vendorId;
+  document.getElementById('tool-desc').textContent = `${profile.category}. ${profile.description}`;
+  document.getElementById('custom-name-field').hidden = request.vendorId !== OTHER;
+  document.getElementById('custom-name').value = request.customName;
+  document.getElementById('purpose').value = request.purpose;
+  document.querySelectorAll('#data-types input').forEach((box) => { box.checked = request.data.includes(box.value); });
+}
+
+function render() {
+  renderDecision();
+  renderProfile();
+}
+
+// ---------------------------------------------------------------------------
+// Inputs
+// ---------------------------------------------------------------------------
+function chooseVendor(vendorId) {
+  request.vendorId = vendorId;
+  profile = profileFor(vendorId);
+  profileEdited = false;
+}
+
+function setup() {
+  document.getElementById('tool').innerHTML =
+    VENDORS.map((v) => `<option value="${esc(v.id)}">${esc(v.name)} (${esc(v.category)})</option>`).join('') +
+    `<option value="${OTHER}">Other: not on the list</option>`;
+  document.getElementById('data-types').innerHTML = DATA_TYPES.map((d) => `
+    <label><input type="checkbox" value="${d.id}">
+      <span><strong>${d.label}<span class="tier tier-${d.tier}">${TIERS[d.tier]}</span></strong><span class="small">${d.hint}</span></span>
+    </label>`).join('');
+  const examples = document.getElementById('examples');
+  examples.insertAdjacentHTML('beforeend', EXAMPLES.map((ex, i) => `<button type="button" class="reset" data-example="${i}">${esc(ex.label)}</button>`).join(''));
+  if (!VENDORS.length) examples.hidden = true;
+
+  examples.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-example]');
+    if (!btn) return;
+    const ex = EXAMPLES[Number(btn.dataset.example)];
+    chooseVendor(ex.vendor);
+    Object.assign(request, { customName: '', purpose: ex.purpose, data: [...ex.data] });
+    renderRequest();
+    render();
+  });
+  document.getElementById('tool').addEventListener('change', (e) => {
+    chooseVendor(e.target.value);
+    renderRequest();
+    render();
+  });
+  document.getElementById('custom-name').addEventListener('input', (e) => { request.customName = e.target.value; render(); });
+  document.getElementById('purpose').addEventListener('input', (e) => { request.purpose = e.target.value; renderDecision(); });
+  document.getElementById('data-types').addEventListener('change', () => {
+    request.data = [...document.querySelectorAll('#data-types input:checked')].map((b) => b.value);
+    renderDecision();
+  });
+
+  document.getElementById('profile-table').addEventListener('change', (e) => {
+    if (e.target.id === 'ent-offered') profile.plans.enterprise = e.target.checked ? blankPlan() : null;
+    else if (e.target.dataset.attr) profile.plans[e.target.dataset.plan][e.target.dataset.attr] = e.target.value;
+    else return;
+    profileEdited = true;
+    render();
+  });
+  document.getElementById('reset-profile').addEventListener('click', () => { chooseVendor(request.vendorId); render(); });
+
+  document.getElementById('rules-table').addEventListener('change', (e) => {
+    const { rule, field } = e.target.dataset;
+    if (rule === undefined) return;
+    settings.rules[Number(rule)][field] = field === 'appliesFrom' ? Number(e.target.value) : e.target.value;
+    renderRules();
+    render();
+  });
+  document.getElementById('retention-limit').addEventListener('input', (e) => {
+    const value = Number(e.target.value);
+    if (e.target.value === '' || !Number.isFinite(value) || value < 0) return; // keep the last valid number while typing
+    settings.retentionLimitDays = value;
+    render();
+  });
+  document.getElementById('reset-rules').addEventListener('click', () => {
+    settings = structuredClone(DEFAULT_SETTINGS);
+    renderRules();
+    render();
+  });
+
+  document.getElementById('decision').addEventListener('click', (e) => {
+    if (e.target.id !== 'copy-ticket') return;
+    const status = document.getElementById('copy-status');
+    navigator.clipboard.writeText(document.getElementById('ticket').textContent)
+      .then(() => { status.textContent = 'Copied.'; }, () => { status.textContent = 'Copy blocked by the browser; select the text instead.'; });
+  });
+
+  if (VENDORS.length) {
+    const start = EXAMPLES[1];
+    chooseVendor(start.vendor);
+    Object.assign(request, { purpose: start.purpose, data: [...start.data] });
+  } else {
+    chooseVendor(OTHER);
+  }
+  renderRules();
+  renderRequest();
+  render();
+}
+
+fetch('data/vendors.json')
+  .then((res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
+  .then((data) => {
+    VENDORS = Array.isArray(data.vendors) ? data.vendors.filter((v) => v?.id && v?.name && v?.plans?.standard) : [];
+    if (data.meta?.note) document.getElementById('footer').textContent = data.meta.note;
+  })
+  .catch((err) => {
+    console.error('Could not load data/vendors.json:', err);
+    const notice = document.getElementById('load-notice');
+    notice.hidden = false;
+    notice.textContent = 'The sample vendor list could not load (browsers block it when the page is opened straight from your files). You can still pick "Other" and fill in the vendor answers by hand, or open the live demo.';
+  })
+  .finally(setup);
+</script>
+</body>
+</html>
