@@ -5,7 +5,7 @@
 ## Problem
 Employees keep finding new AI tools and asking IT to approve them. Each request raises the same questions: will the vendor train on our data, how long does it keep it, can we control who signs in? Without a standard check, answers depend on who reviews the ticket, and nobody can explain afterwards why one tool was approved and another wasn't.
 
-This tool answers **"should we approve this AI tool at all?"** It is the "before" half of a pair with [AI Value Tracker](https://github.com/sr-tech-hub/ai-value-tracker), which answers "is our AI spend paying off?" once tools are bought. Approve first, then measure.
+This tool answers **"should we approve this AI tool at all?"** It is the first of a set of three: approve the tool here, plan the rollout with [AI Rollout Planner](https://sr-tech-hub.github.io/ai-rollout-planner/), then measure whether it pays off with [AI Value Tracker](https://sr-tech-hub.github.io/ai-value-tracker/).
 
 ## What it checks
 The employee picks a tool (or enters one that isn't listed), says what it's for, and ticks the data they'd put into it. The most sensitive data ticked sets the **data level**: Public, Internal, Confidential (source code, financial) or Restricted (customer PII, HR/health). Higher levels check more rules:
@@ -54,6 +54,12 @@ Other sample vendors show the in-between cases. Codewright, with source code, pa
 2. To run it locally, start a small web server in the project folder with `python3 -m http.server`, then open http://localhost:8000. If you double-click `index.html` instead, the browser blocks it from reading the vendor list; the page still works with "Other" and vendor answers filled in by hand.
 
 Live demo: https://sr-tech-hub.github.io/ai-tool-risk-triage/
+
+## Part of a set
+Three small tools covering the life of an AI tool at a company:
+- **AI Tool Risk Triage** (this one): should we approve it?
+- **[AI Rollout Planner](https://sr-tech-hub.github.io/ai-rollout-planner/)** ([code](https://github.com/sr-tech-hub/ai-rollout-planner)): how do we roll it out?
+- **[AI Value Tracker](https://sr-tech-hub.github.io/ai-value-tracker/)** ([code](https://github.com/sr-tech-hub/ai-value-tracker)): is it paying off?
 
 ## Built with
 HTML, CSS and JavaScript (single page, no build step, no libraries), developed with Claude Code.
