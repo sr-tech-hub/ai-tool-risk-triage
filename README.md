@@ -55,8 +55,8 @@ Other sample vendors show the in-between cases. Codewright, with source code, pa
 
 Live demo: https://sr-tech-hub.github.io/ai-tool-risk-triage/
 
-## Part of a set
-Three small tools covering the life of an AI tool at a company:
+## Part of the AI Adoption Toolkit
+Three small tools covering the life of an AI tool at a company, linked by a shared menu bar:
 - **AI Tool Risk Triage** (this one): should we approve it?
 - **[AI Rollout Planner](https://sr-tech-hub.github.io/ai-rollout-planner/)** ([code](https://github.com/sr-tech-hub/ai-rollout-planner)): how do we roll it out?
 - **[AI Value Tracker](https://sr-tech-hub.github.io/ai-value-tracker/)** ([code](https://github.com/sr-tech-hub/ai-value-tracker)): is it paying off?
